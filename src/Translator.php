@@ -14,22 +14,24 @@ class Translator
      * @var string
      */
     protected $key;
-
     /**
-     * @var resource
+     * @var ConnectionInterface
      */
-    protected $handler;
+    protected $connection;
 
     /**
      * @link http://api.yandex.com/key/keyslist.xml Get a free API key on this page.
      *
-     * @param string $key The API key
+     * @param string              $key        The API key
+     * @param ConnectionInterface $connection The connection instance
      */
-    public function __construct($key)
+    public function __construct($key, ConnectionInterface $connection = null)
     {
         $this->key = $key;
-        $this->handler = curl_init();
-        curl_setopt($this->handler, CURLOPT_RETURNTRANSFER, true);
+        if ($connection === null) {
+            $connection = new CurlConnection();
+        }
+        $this->connection = $connection;
     }
 
     /**
@@ -98,8 +100,7 @@ class Translator
     {
         $parameters['key'] = $this->key;
         $url = static::BASE_URL . $uri . '?' . http_build_query($parameters);
-        curl_setopt($this->handler, CURLOPT_URL, $url);
-        $result = json_decode(curl_exec($this->handler), true);
+        $result = json_decode($this->connection->execute($url));
         if (isset($result['code']) && $result['code'] > 200) {
             throw new Exception($result['message'], $result['code']);
         }
